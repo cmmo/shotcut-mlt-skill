@@ -49,4 +49,7 @@ checkpoint.ps1     validated Git checkpoint
 ## Requirements
 
 FFmpeg (+ ffprobe), Shotcut (bundles `melt`), `uv`, Git. Set `MELT_PATH` if melt is not on `PATH` and not in a
-standard Shotcut install location.
+standard Shotcut install location. Restricted agent runners can expose different tool permissions, Python
+discovery and Git ownership than the interactive terminal; see `references/troubleshooting.md` before
+reinstalling tools or changing global Git configuration.
+

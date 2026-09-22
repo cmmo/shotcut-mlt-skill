@@ -82,6 +82,36 @@ The shell's PATH is a snapshot from when it opened. Either open a new shell or r
 $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine')+';'+[Environment]::GetEnvironmentVariable('Path','User')
 ```
 
+In a restricted agent runner, a directory can appear on `PATH` while the process is denied permission to
+traverse it. `Get-Command uv` or `Get-Command ffmpeg` then reports that the command does not exist even though
+it works in the person's interactive terminal. Check the package directory with `Test-Path` and
+`Get-ChildItem`; if traversal is denied, request access and invoke the executable by its absolute path. Do not
+reinstall the tool merely because the restricted process cannot resolve it.
+
+## `uv run` downloads Python or fails creating a Python version link
+
+`uv run` may try to install a managed Python when the runner's existing interpreter is not discoverable. In a
+restricted or cross-user process, that install can fail under `%APPDATA%\uv` even though a usable Python is
+already available. Pin that interpreter for the session and prevent an unnecessary download:
+
+```powershell
+$env:UV_PYTHON = (Get-Command python).Source   # or an absolute python.exe path
+$env:UV_NO_MANAGED_PYTHON = '1'
+uv run scripts\mlt_tools.py summary projects\x.mlt
+```
+
+For one command, `uv run --python C:\path\to\python.exe ...` is equivalent. The scripts are stdlib-only, so
+using an existing compatible Python does not skip dependency installation.
+
+## Git rejects the checkpoint repo as dubious ownership in an agent runner
+
+Some agent harnesses run approved external commands under a service account. Git then sees a repository owned
+by another account and rejects it as a dubious ownership case, even though `user.email` exists in the repo.
+`checkpoint.ps1` passes `safe.directory` only for the explicitly selected `-Lab` and only for each Git command;
+it does not modify global Git configuration. It also reports the original Git error separately from a genuinely
+missing identity. If invoking Git manually in the same runner, use `git -c safe.directory=C:\exact\lab ...`
+rather than adding a broad or global wildcard.
+
 ## status says HUMAN-MODIFIED when nobody touched it
 
 `.state` records a hash of what the agent last wrote. Switching Git branches changes the file without going through the scripts, so the hash no longer matches. Harmless — run `summary` and carry on.
@@ -98,3 +128,4 @@ $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine')+';'+[Environ
 ## Shotcut is open and I need to edit
 
 Do not. Shotcut writes the entire project on save, so your edit vanishes at their next Ctrl+S. Ask them to save and close. Reading and committing the file while Shotcut is open is safe — only writing is not.
+

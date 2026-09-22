@@ -13,7 +13,8 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $scripts = $PSScriptRoot
-Set-Location $Lab
+$Lab = (Resolve-Path -LiteralPath $Lab).Path
+Set-Location -LiteralPath $Lab
 
 # In PowerShell 5.1, anything a native command writes to stderr becomes a terminating error while
 # ErrorActionPreference is 'Stop' -- and git reports routine things there (line-ending notices,
@@ -22,10 +23,13 @@ function Invoke-Git {
     $prev = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     try {
-        $out = & git @args 2>&1
-        # keep git's own message so a failure can explain itself instead of just "commit failed"
-        $script:GitErr = (($out | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] }) |
-                          ForEach-Object { $_.ToString() }) -join "`n"
+        # Agent harnesses sometimes execute approved commands as a service account, so Git sees
+        # a different owner and refuses the repository as dubious. Trust only this explicitly
+        # selected lab for this invocation; do not mutate the user's global safe.directory list.
+        $out = & git -c "safe.directory=$Lab" @args 2>&1
+        $script:GitExit = $LASTEXITCODE
+        # Keep all output so a failure reports Git's real reason instead of a misleading fallback.
+        $script:GitErr = ($out | ForEach-Object { $_.ToString() }) -join "`n"
         $out | Where-Object { $_ -isnot [System.Management.Automation.ErrorRecord] }
     } finally { $ErrorActionPreference = $prev }
 }
@@ -39,7 +43,11 @@ if (-not (Test-Path (Join-Path $Lab '.git'))) {
           "  git config user.name '<name>'; git config user.email '<email>'`n" +
           "  copy the toolkit's assets\project-gitignore here as .gitignore"
 }
-if (-not (Invoke-Git config user.email)) {
+$email = Invoke-Git config user.email
+if ($script:GitExit -ne 0 -and $script:GitErr) {
+    throw "git config user.email failed:`n$script:GitErr"
+}
+if (-not $email) {
     throw "This repo has no git identity, so a commit would fail. Set one:`n" +
           "  git config user.name '<name>'; git config user.email '<email>'"
 }
@@ -48,7 +56,9 @@ if ((Get-Process shotcut -ErrorAction SilentlyContinue) -and -not $AllowShotcutR
 }
 
 # every changed/new .mlt must still parse before it goes into history
-$changed = Invoke-Git status --porcelain | ForEach-Object { $_.Substring(3).Trim('"') } |
+$status = Invoke-Git status --porcelain
+if ($script:GitExit -ne 0) { throw "git status failed:`n$script:GitErr" }
+$changed = $status | ForEach-Object { $_.Substring(3).Trim('"') } |
     Where-Object { $_ -like '*.mlt' -and (Test-Path $_) } | Select-Object -Unique
 foreach ($f in $changed) {
     uv run "$scripts\mlt_tools.py" validate $f
@@ -60,12 +70,16 @@ if (Test-Path (Join-Path $Lab 'media')) {
 }
 if (Test-Path (Join-Path $Lab 'projects\backups')) {
     Invoke-Git check-ignore -q projects/backups | Out-Null
-    if ($LASTEXITCODE -ne 0) {
+    if ($script:GitExit -ne 0) {
         Write-Host "note: projects/backups is not git-ignored - those are crash copies, not history."
     }
 }
 Invoke-Git add -A | Out-Null
-if (-not (Invoke-Git status --porcelain)) { Write-Host "Nothing to commit."; exit 0 }
+if ($script:GitExit -ne 0) { throw "git add failed:`n$script:GitErr" }
+$status = Invoke-Git status --porcelain
+if ($script:GitExit -ne 0) { throw "git status failed:`n$script:GitErr" }
+if (-not $status) { Write-Host "Nothing to commit."; exit 0 }
 Invoke-Git commit -q -m $Message | Out-Null
-if ($LASTEXITCODE -ne 0) { throw "git commit failed:`n$script:GitErr" }
+if ($script:GitExit -ne 0) { throw "git commit failed:`n$script:GitErr" }
 Invoke-Git log -1 --format='checkpoint %h  %s'
+if ($script:GitExit -ne 0) { throw "git log failed:`n$script:GitErr" }

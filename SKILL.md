@@ -35,7 +35,9 @@ Missing pieces on Windows: `winget install --id Gyan.FFmpeg -e -s winget`, `Melt
 $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine')+';'+[Environment]::GetEnvironmentVariable('Path','User')
 ```
 
-The scripts here are stdlib-only Python run with `uv run`; nothing to pip install. Set `MELT_PATH` if melt lives somewhere unusual.
+The scripts here are stdlib-only Python run with `uv run`; nothing to pip install. Set `MELT_PATH` if melt lives
+somewhere unusual. In restricted runners, a tool can be on `PATH` but inaccessible, or `uv` can try to
+provision Python under a different account; see `references/troubleshooting.md` before reinstalling anything.
 
 ## Project layout
 
@@ -173,3 +175,4 @@ This takes minutes for a few minutes of footage. Run it in the foreground with a
 
 - `references/mlt-xml.md` — the XML structures: what is verified, with real snippets. **Read this before writing any structure you have not used before**, especially filters, transitions, tracks and keyframes.
 - `references/troubleshooting.md` — symptoms and causes: black video, vanished filters, melt hanging, emoji, PowerShell 5.1 quirks.
+
