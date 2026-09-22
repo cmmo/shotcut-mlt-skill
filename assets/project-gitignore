@@ -1,0 +1,45 @@
+# Copy to your project root as .gitignore
+# Git holds the editing history; media files and backups stay out of it.
+
+media/raw/*
+media/generated/*
+!media/raw/.gitkeep
+!media/generated/.gitkeep
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.webm
+*.mxf
+*.mts
+*.m2ts
+*.wav
+*.mp3
+*.aac
+*.m4a
+*.flac
+*.png
+*.jpg
+*.jpeg
+
+# crash-protection copies and agent bookkeeping - NOT version control
+projects/backups/
+projects/.state/
+*.mlt.tmp
+
+# Shotcut / FFmpeg leftovers
+projects/Emojis/
+*.tmp
+*.part
+*.log
+ffmpeg2pass-*.log
+*.autosave
+*.mlt.autosave
+
+.venv/
+__pycache__/
+*.pyc
+
+Thumbs.db
+desktop.ini
+.DS_Store

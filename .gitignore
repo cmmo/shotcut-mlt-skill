@@ -1,0 +1,12 @@
+# compiled Python embeds absolute local paths - never publish it
+__pycache__/
+*.pyc
+
+# eval scratch space
+*-workspace/
+evals/runs/
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store

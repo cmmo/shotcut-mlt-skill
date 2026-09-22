@@ -1,0 +1,48 @@
+{
+  "skill_name": "shotcut-mlt",
+  "evals": [
+    {
+      "id": 0,
+      "name": "new-project-title-caption",
+      "prompt": "I've got a 40 second clip at media\\raw\\trip.mp4. Put a title card on the front that says 'Family Trip 2026', and add a caption around 8 seconds in that says 'the coast road'. I want to open it in Shotcut afterwards and tweak the timing myself.",
+      "expected_output": "An editable .mlt project (not a rendered MP4) with a title card at the start of V1 and a caption clip on an overlay track near 8s; validates with melt; a preview frame shows the video, not black.",
+      "files": ["fixtures/newproj"],
+      "assertions": [
+        {"text": "Produced a .mlt project file, not only a rendered video"},
+        {"text": "Title card clip exists at the start of the main video track"},
+        {"text": "Caption exists on a separate overlay track starting near 8 seconds"},
+        {"text": "Project passes XML + structure validation and loads in melt"},
+        {"text": "A rendered preview frame shows the video picture rather than a black frame"},
+        {"text": "Overlay track blend transitions use a_track=1 and the bottom track blend has disable=1"}
+      ]
+    },
+    {
+      "id": 1,
+      "name": "continue-after-human-edit",
+      "prompt": "I opened projects\\trip.mlt in Shotcut, made some changes and saved. Take a look at what I changed, then add a closing caption near the end that says 'see you next year'. Don't undo my edits.",
+      "expected_output": "Correctly identifies the human's two edits (caption reworded to 'our first stop, the harbour'; clip head trimmed to in=00:00:03.000) from the git diff, adds the closing caption surgically, and leaves both human edits intact.",
+      "files": ["fixtures/roundtrip"],
+      "assertions": [
+        {"text": "Identified the reworded caption ('our first stop, the harbour') as a human change"},
+        {"text": "Identified the trimmed clip in-point (00:00:03.000) as a human change"},
+        {"text": "Both human edits are still present in the final file"},
+        {"text": "The new closing caption was added near the end of the timeline"},
+        {"text": "The project was not regenerated from scratch"},
+        {"text": "A backup of the pre-edit project exists"}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "highlight-cut",
+      "prompt": "Make me a 12 second highlight version of projects\\trip.mlt. Keep it editable — I'll polish it in Shotcut.",
+      "expected_output": "A new ~12s .mlt derived from the source project, with the source project left byte-identical; overlays carried across or dropped deliberately; validates in melt.",
+      "files": ["fixtures/roundtrip"],
+      "assertions": [
+        {"text": "Result is a new editable .mlt project, roughly 12 seconds long"},
+        {"text": "The original source project is unchanged"},
+        {"text": "The derived project passes validation and loads in melt"},
+        {"text": "Overlay text from the source was carried across or deliberately dropped, not corrupted"}
+      ]
+    }
+  ]
+}
